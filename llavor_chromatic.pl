@@ -13,7 +13,9 @@ sat(CNF,I,M):-
    simplif(Lit,CNF,CNFS),
 
    % crida recursiva amb la CNF i la interpretacio actualitzada
-   sat(... , ... ,M).
+
+   append(I, [Lit], J),
+   sat(CNFS, J, M).
 
 
 %%%%%%%%%%%%%%%%%%
@@ -24,6 +26,11 @@ sat(CNF,I,M):-
 %  - un qualsevol o el seu negat.
 % ...
 
+% Ha de triar un literal d’una clausula unitaria, si no n’hi ha cap, llavors un literal pendent qualsevol.
+tria(CNF, Lit):- member([Lit], CNF),!.
+tria([[Lit|_]|_],Lit).
+tria([[Lit|_]|_],-Lit).
+
 %%%%%%%%%%%%%%%%%%%%%
 % simlipf(Lit, F, FS)
 % Donat un literal Lit i una CNF,
@@ -31,6 +38,22 @@ sat(CNF,I,M):-
 %  - sense les clausules que tenen lit
 %  - treient -Lit de les clausules on hi es, si apareix la clausula buida fallara.
 % ...
+
+simplif(_,[],[]).
+simplif(Lit,[X|CNF],[Y|F]):-   NL is -Lit, %negat del literal
+                                member(NL, X),
+                                delete(X, NL, Y), %eliminem element de la llista
+                                \+ Y = [],
+                                simplif(Lit, CNF, F).
+
+simplif(Lit,[X|CNF],[X|F]):-   \+ member(Lit, X),
+                                NL is -Lit,
+                                \+ member(NL, X), %si no esta a la clausula l'afegim
+                                simplif(Lit, CNF, F).
+
+simplif(Lit,[X|CNF],F):-       member(Lit, X), %simplifiquem si el literal esta a la clausula
+                                simplif(Lit, CNF, F).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,17 +70,108 @@ sat(CNF,I,M):-
 % -> el segon parametre sera la CNF que codifica que exactament una sigui certa.
 % ... pots crear i utilitzar els auxiliars comaminimUn i nomesdUn
 
+unCert(L, CNF):- comaminimUn(L, CNF1), nomesdUn(L, CNF2), append(CNF1, CNF2, CNF).
+
 %%%%%%%%%%%%%%%%%%%
 % comaminimUn(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que com a minim una sigui certa.
 % ...
-
+comaminimUn(L,[L]).
 %%%%%%%%%%%%%%%%%%%
 % nomesdUn(L,CNF)
 % Donat una llista de variables booleanes,
 % -> el segon parametre sera la CNF que codifica que com a molt una sigui certa.
 % ...
+
+nomesdUn(L, CNF):- llistaNegativa(L,Ns), combinacions(Ns,CNF).
+
+combinacions([],[]):-!.
+combinacions([A|AS],Res):- emparellar(A,AS,R1), append(R1,R2,Res), combinacions(AS,R2).
+
+emparellar(_,[],[]):-!.
+emparellar(A,[B|BS],[[A,B]|LS]):- dif(A,B), emparellar(A,BS,LS).
+
+llistaNegativa([],[]):-!.
+llistaNegativa([A|AS], [X|XS]):- X is -A, llistaNegativa(AS,XS).
+
+
+% AUX
+% llista(I,F,L)
+% Donat un inici i un fi
+% -> el tercer parametre sera una llista de numeros d'inici a fi
+llista(X,X,[X]) :- !. %en cas que siguin iguals I i F
+llista(X,Y,[X|Xs]) :-%concatenem x a xs
+    X =< Y,%X ha de ser mes petit
+    Z is X+1,%sumem 1
+    llista(Z,Y,Xs).%next
+
+% llistaDeLlistes(N,M,L)
+% donats N i M, retorna una llista de N llistes de tamany M amb nombres del 1 al N*M
+% -> L sera la llista a retornar
+llistaDeLlistes(N,M,L) :- llistaDeLlistesAux(N,M,1,L).
+llistaDeLlistesAux(1,M,X,R) :- T is X+M-1, llista(X,T,L),R = [L],!.
+llistaDeLlistesAux(N,M,X,L) :- T is X+M-1,llista(X,T,Laux), V1 is N - 1, V2 is X+M, llistaDeLlistesAux(V1,M,V2,Lrec), append([Laux],Lrec,L).
+
+
+% Filtra els numeros negatius
+negative(Number) :-
+   Number < 0.
+
+restriccioColorPerNode([],[]):-!.%no idea lmao puto prolog asdifhadiosfh, pero vols que si hi ha una llista si te un terme negatiu el true o que?
+restriccioColorPerNode([N|G],CNF):-
+   unCert(N,Resultat),
+   restriccioColorPerNode(G,NovaCNF),
+   append(NovaCNF,Resultat,CNF).
+
+nth(1,[X|_],X).
+nth(K, [_|L],X) :- nth(K1, L, X), K is K1 + 1.
+
+
+%nth(1,[X|_],X).
+%nth(K, [_|L],X) :- nth(K1, L, X), K is K1 + 1.
+
+%restriccioColorsFixes(Graf,[R|Inici],[]).%WIP
+restriccioColorsFixes(_,[],[]).
+restriccioColorsFixes(_,[(N,C)|Inici],CNF):-
+   R is N * C,
+   restriccioColorsFixes([],Inici,NovaCNF),
+   append(NovaCNF,[[R]],CNF).
+
+% Graf
+% [
+%  (node1)[1(blau),2(verd),3(vermell)]
+%  (node2)[4(blau),5(verd),6(vermell)]
+%  (node3)[7(blau),8(verd),9(vermell)]
+%  (node4)[10(blau),11(verd),12(vermell)]
+% ]
+
+restriccioColorsAdjacentsAux([E],[D],CNF):-
+   nomesdUn([E,D],CNF).
+restriccioColorsAdjacentsAux([E|Ex],[D|Dx],CNF):-
+   nomesdUn([E,D],C),
+   restriccioColorsAdjacentsAux(Ex,Dx,NovaCNF),
+   append(NovaCNF,C,CNF).
+   
+
+
+   
+
+
+restriccioColorsAdjacents(_,[],[]):-!.
+restriccioColorsAdjacents(Graf,[(E,D)|Arestes],CNF):-
+   nth(E,Graf,NodeE),
+   nth(D,Graf,NodeD),
+   restriccioColorsAdjacentsAux(NodeE,NodeD,C),
+   restriccioColorsAdjacents(Graf,Arestes,NovaCNF),
+   append(C,NovaCNF,CNF).
+
+%restriccioColorsAdjacents(_,_,[]):-!.  %
+
+
+%noAmenacesColumnes(N,D):-
+%   columnes(N,L), llistesAVars(L,N,VARS), noAmenacesAux(VARS,D).
+
 
 %%%%%%%%%%%%%%%%%%%
 % els nodes del graph son nombres consecutius d'1 a N.
@@ -66,11 +180,19 @@ sat(CNF,I,M):-
 % Inici es la llista de parelles (node,num_color) que s'han de forçar
 % C sera la CNF que codifica graph coloring problem pel graph donat
 codifica(N,K,Arestes,Inici,C):-
-   crear la llista de llistes de variables pels colors de cada node
-   crear la CNF que fa que cada node tingui un color
-   crear la CNF que força els colors dels nodes segons Inici
-   crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
-   C sera el resultat d'ajuntar les CNF creades
+   llistaDeLlistes(N,K,Graf),
+   restriccioColorPerNode(Graf,CNF1),
+   restriccioColorsFixes(Graf,Inici,CNF2),
+   restriccioColorsAdjacents(Graf,Arestes,CNF3),
+   append(CNF1,CNF2,CNF4),
+   append(CNF3,CNF4,C).
+   
+
+  %crear la llista de llistes de variables pels colors de cada node
+  %crear la CNF que fa que cada node tingui un color
+  %crear la CNF que força els colors dels nodes segons Inici
+  %crear la CNF que fa que dos nodes que es toquen tinguin colors diferents
+  %C sera el resultat d'ajuntar les CNF creades
 
     
                                  
@@ -79,21 +201,46 @@ codifica(N,K,Arestes,Inici,C):-
 % Donat el nombre de nodes, el nombre de colors, les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
 
+mostrarSolucio([],_,_).
+mostrarSolucio([V|Model],Nactual,CMAX):-
+   T1 is V - 1,
+   T2 is T1 mod CMAX,
+   Resultat is T2 + 1,
+   write('El node '),write(Nactual),write(' sera del color nº'),write(Resultat),nl,
+   Seguent is Nactual + 1,
+   mostrarSolucio(Model,Seguent,CMAX).
+
+mostrarSolucio2([],_,_).
+mostrarSolucio2([V|Model],Nactual,CMAX):-
+   T1 is V - 1,
+   T2 is T1 mod CMAX,
+   Resultat is T2 + 1,
+   write('El node '),write(Nactual),write(' sera del color nº'),write(Resultat),nl,
+   Seguent is Nactual + 1,
+   mostrarSolucio(Model,Seguent,CMAX).
+
+
 resol(N,K,A, I):-
-   codifica(...),
-   write('SAT Solving ..................................'), nl,
-   crida a SAT
-   write('Graph (color number per node in order: '), nl,
-   mostrar el resultat
-
-
+   codifica(N,K,A,I,CNF),
+   write(CNF),
+   write('SAT Solving at k = '),write(K), nl,
+   sat(CNF,[],RESULTAT),
+   exclude(negative,RESULTAT,ResultatMostrar),
+   sort(ResultatMostrar,ResultatMostrarOrdenat),
+   %caguendiooooos jo estic mirant pero hi ha codi que no entenc que fa, el unCert?codifica una cnf per tal k una i nomes una d les variables sigui certa
+   mostrarSolucio(ResultatMostrarOrdenat,1,K).
 
 %%%%%%%%%%%%%%%%%%%%
 % chromatic(N,A,Inputs)
 % Donat el nombre de nodes,  les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
-% Pista, us pot ser util fer una inmersio amb el nombre de colors permesos.
-   
+% Pista, us pot ser util fer una immersio amb el nombre de colors permesos.
+chromatic(N,A,Inputs):- \+ chromaticAux(N,A,Inputs,1).
+
+chromaticAux(N,A,Inputs,K):-
+   \+ resol(N,K,A,Inputs),
+   NK is K + 1,
+   chromaticAux(N,A,Inputs,NK).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % com a query podeu cridar:
@@ -101,7 +248,10 @@ resol(N,K,A, I):-
 % i aixi amb altres grafs que us definiu com els que hi ha a continuacio:
    
 
-% aquest graf te 21 nodes i nombre chromatic 4.
+% aquest graf te 3 nodes i nombre chromatic 3.
+graf0(3,[(1,2),(2,3),(3,1)]).
+
+% aquest graf te 11 nodes i nombre chromatic 4.
 graf1(11,[(1,2),(1,4),(1,7),(1,9),(2,3),(2,6),(2,8),(3,5),(3,7),(3,10),
          (4,5),(4,6),(4,10),(5,8),(5,9),(6,11),(7,11),(8,11),(9,11),(10,11)]).
 
