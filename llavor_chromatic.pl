@@ -127,10 +127,6 @@ restriccioColorPerNode([N|G],CNF):-
 nth(1,[X|_],X).
 nth(K, [_|L],X) :- nth(K1, L, X), K is K1 + 1.
 
-
-%nth(1,[X|_],X).
-%nth(K, [_|L],X) :- nth(K1, L, X), K is K1 + 1.
-
 %restriccioColorsFixes(Graf,[R|Inici],[]).%WIP
 restriccioColorsFixes(_,[],[]):-!.
 restriccioColorsFixes(_,[(N,C)|Inici],CNF):-
@@ -152,10 +148,6 @@ restriccioColorsAdjacentsAux([E|Ex],[D|Dx],CNF):-
    nomesdUn([E,D],C),
    restriccioColorsAdjacentsAux(Ex,Dx,NovaCNF),
    append(NovaCNF,C,CNF).
-   
-
-
-   
 
 
 restriccioColorsAdjacents(_,[],[]):-!.
@@ -165,8 +157,6 @@ restriccioColorsAdjacents(Graf,[(E,D)|Arestes],CNF):-
    restriccioColorsAdjacentsAux(NodeE,NodeD,C),
    restriccioColorsAdjacents(Graf,Arestes,NovaCNF),
    append(C,NovaCNF,CNF).
-
-%restriccioColorsAdjacents(_,_,[]):-!.  %
 
 
 %noAmenacesColumnes(N,D):-
@@ -220,11 +210,15 @@ mostrarSolucio2([V|Model],Nactual,CMAX):-
    mostrarSolucio(Model,Seguent,CMAX).
 
 
+verificarResultat(RESULTAT):- RESULTAT = [],!,
+                              write('No hi ha solucio').
+
 resol(N,K,A, I):-
    codifica(N,K,A,I,CNF),
    write(CNF),
    write('SAT Solving at k = '),write(K), nl,
    sat(CNF,[],RESULTAT),
+   verificarResultat(RESULTAT),
    exclude(negative,RESULTAT,ResultatMostrar),
    sort(ResultatMostrar,ResultatMostrarOrdenat),
    mostrarSolucio(ResultatMostrarOrdenat,1,K).
