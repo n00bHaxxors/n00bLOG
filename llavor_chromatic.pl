@@ -4,14 +4,13 @@
 % si F es satisfactible, M sera el model de F afegit a la interpretacio I (a la primera crida I sera buida).
 % Assumim invariant que no hi ha literals repetits a les clausules ni la clausula buida inicialment.
 
-sat([],I,I):-     write('SAT!!'),write(I),nl,!.
+sat([],I,I):-     write('SAT!!'),nl,!.
 sat(CNF,I,M):-
    % Ha de triar un literal d’una clausula unitaria, si no n’hi ha cap, llavors un literal pendent qualsevol.
    tria(CNF,Lit),
 
    % Simplifica la CNF amb el Lit triat (compte pq pot fallar, es a dir si troba la clausula buida fallara i fara backtraking).
    simplif(Lit,CNF,CNFS),
-   write(CNFS),nl,
    % crida recursiva amb la CNF i la interpretacio actualitzada
 
    append(I, [Lit], J),
@@ -135,7 +134,7 @@ restriccioColorsFixes(_,[(N,C)|Inici],CNF):-
    append(NovaCNF,[[R]],CNF).
 
 % Graf
-% [
+% [ (4 nodes, 3 colors)[1,5,7]
 %  (node1)[1(blau),2(verd),3(vermell)]
 %  (node2)[4(blau),5(verd),6(vermell)]
 %  (node3)[7(blau),8(verd),9(vermell)]
@@ -190,51 +189,55 @@ codifica(N,K,Arestes,Inici,C):-
 % resolGraf(N,A,K,Inputs)
 % Donat el nombre de nodes, el nombre de colors, les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
-mostrarSolucio(_,Color,CMAX):-
+mostrarSolucio(_,Color,CMAX,_):-
    Color is CMAX + 1,!.
-mostrarSolucio(Sol,Color,CMAX):-
+mostrarSolucio(_,_,_,L):-
+   L =< 0,!.
+mostrarSolucio(Sol,Color,CMAX,L):-
    NextColor is Color + 1,
    write('color '),write(Color),write(': '),
-   mostrarNodesColor(Sol,Color,CMAX),nl,
-   mostrarSolucio(Sol,NextColor,CMAX),!.
+   mostrarNodesColor(Sol,Color,CMAX,L),nl,
+   mostrarSolucio(Sol,NextColor,CMAX,L),!.
 
-mostrarNodesColor([],_,_):-!.
-mostrarNodesColor([V|Vl],Color,CMAX):-
+mostrarNodesColor([],_,_,_):-!.
+mostrarNodesColor([V|Vl],Color,CMAX,L):-
    T1 is V - 1,
    T2 is T1 mod CMAX, % per obtenir el color
    Color is T2 + 1,
    Node is truncate((T1 / CMAX) + 1),
-   write(Node), write(','),
-   mostrarNodesColor(Vl,Color,CMAX),!.
-mostrarNodesColor([_|Vl],Color,CMAX):-
-   mostrarNodesColor(Vl,Color,CMAX),!.
+   write(Node), write(', '),
+   L1 is L-1,
+   mostrarNodesColor(Vl,Color,CMAX,L1),!.
+mostrarNodesColor([_|Vl],Color,CMAX,L):-
+   mostrarNodesColor(Vl,Color,CMAX,L),!.
 
 
 %color 1: 1, 4, 7, 8
 %color 2: 2, 5, 6
 %color 3: 3, 9, 10
 
+list_length([],0).
+list_length([_|XS],N):-list_length(XS,N1), N is N1+1.
+
 resol(N,K,A,I):-
    codifica(N,K,A,I,CNF),
    sat(CNF,[],RESULTAT),
-   write(CNF),nl,
-   write('El nombre cromàtic és: '), write(K),nl,
    exclude(negative,RESULTAT,ResultatMostrar),
    sort(ResultatMostrar,ResultatMostrarOrdenat),
-   write(ResultatMostrarOrdenat),nl,
-   mostrarSolucio(ResultatMostrarOrdenat,1,K).
-resol(_,K,_,_):-
-   write('No hi ha solucio amb '), write(K), write(' colors'), nl, false.
+   list_length(ResultatMostrarOrdenat,L),
+   mostrarSolucio(ResultatMostrarOrdenat,1,K,L).
+   
+trobarNombreCromatic(N,A,I,K,K):- codifica(N,K,A,I,CNF),sat(CNF,[],_),!.
+trobarNombreCromatic(N,A,Inputs,K,S):- NextK is K + 1, trobarNombreCromatic(N,A,Inputs,NextK,S).
+
 
 %%%%%%%%%%%%%%%%%%%%
 % chromatic(N,A,Inputs)
 % Donat el nombre de nodes,  les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
 % Pista, us pot ser util fer una immersio amb el nombre de colors permesos.
-chromatic(N,A,Inputs):- chromaticAux(N,A,Inputs,1).
+chromatic(N,A,Inputs):- trobarNombreCromatic(N,A,Inputs,1,K),write('El nombre cromàtic és '), write(K),nl,resol(N,K,A,Inputs), true.
 
-chromaticAux(N,A,Inputs,K):- resol(N,K,A,Inputs).
-chromaticAux(N,A,Inputs,K):- NK is K + 1, chromaticAux(N,A,Inputs,NK).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % com a query podeu cridar:
