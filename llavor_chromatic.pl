@@ -189,27 +189,24 @@ codifica(N,K,Arestes,Inici,C):-
 % resolGraf(N,A,K,Inputs)
 % Donat el nombre de nodes, el nombre de colors, les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
-mostrarSolucio(_,Color,CMAX,_):-
+mostrarSolucio(_,Color,CMAX):-
    Color is CMAX + 1,!.
-mostrarSolucio(_,_,_,L):-
-   L =< 0,!.
-mostrarSolucio(Sol,Color,CMAX,L):-
+mostrarSolucio(Sol,Color,CMAX):-
    NextColor is Color + 1,
-   write('color '),write(Color),write(': '),
    mostrarNodesColor(Sol,Color,CMAX,L),nl,
-   mostrarSolucio(Sol,NextColor,CMAX,L),!.
+   write('color '),write(Color),write(': '),write(L),
+   mostrarSolucio(Sol,NextColor,CMAX),!.
 
-mostrarNodesColor([],_,_,_):-!.
+mostrarNodesColor([],_,_,[]):-!.
 mostrarNodesColor([V|Vl],Color,CMAX,L):-
    T1 is V - 1,
    T2 is T1 mod CMAX, % per obtenir el color
    Color is T2 + 1,
    Node is truncate((T1 / CMAX) + 1),
-   write(Node), write(', '),
-   L1 is L-1,
-   mostrarNodesColor(Vl,Color,CMAX,L1),!.
+   mostrarNodesColor(Vl,Color,CMAX,L1),
+   append([Node],L1,L),!.
 mostrarNodesColor([_|Vl],Color,CMAX,L):-
-   mostrarNodesColor(Vl,Color,CMAX,L),!.
+   mostrarNodesColor(Vl,Color,CMAX,L).
 
 
 %color 1: 1, 4, 7, 8
@@ -219,13 +216,12 @@ mostrarNodesColor([_|Vl],Color,CMAX,L):-
 list_length([],0).
 list_length([_|XS],N):-list_length(XS,N1), N is N1+1.
 
-resol(N,K,A,I):-
+trobarCromatics(N,K,A,I):-
    codifica(N,K,A,I,CNF),
    sat(CNF,[],RESULTAT),
    exclude(negative,RESULTAT,ResultatMostrar),
    sort(ResultatMostrar,ResultatMostrarOrdenat),
-   list_length(ResultatMostrarOrdenat,L),
-   mostrarSolucio(ResultatMostrarOrdenat,1,K,L).
+   mostrarSolucio(ResultatMostrarOrdenat,1,K).
    
 trobarNombreCromatic(N,A,I,K,K):- codifica(N,K,A,I,CNF),sat(CNF,[],_),!.
 trobarNombreCromatic(N,A,Inputs,K,S):- NextK is K + 1, trobarNombreCromatic(N,A,Inputs,NextK,S).
@@ -236,7 +232,7 @@ trobarNombreCromatic(N,A,Inputs,K,S):- NextK is K + 1, trobarNombreCromatic(N,A,
 % Donat el nombre de nodes,  les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
 % Pista, us pot ser util fer una immersio amb el nombre de colors permesos.
-chromatic(N,A,Inputs):- trobarNombreCromatic(N,A,Inputs,1,K),write('El nombre cromàtic és '), write(K),nl,resol(N,K,A,Inputs), true.
+resol(N,A,Inputs):- trobarNombreCromatic(N,A,Inputs,1,K),write('El nombre cromàtic és '), write(K),nl,trobarCromatics(N,K,A,Inputs), true.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
