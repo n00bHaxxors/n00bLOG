@@ -118,7 +118,7 @@ llistaDeLlistesAux(N,M,X,L) :- T is X+M-1,llista(X,T,Laux), V1 is N - 1, V2 is X
 negative(Number) :-
    Number < 0.
 
-restriccioColorPerNode([],[]):-!.%no idea lmao puto prolog asdifhadiosfh, pero vols que si hi ha una llista si te un terme negatiu el true o que?
+restriccioColorPerNode([],[]):-!.
 restriccioColorPerNode([N|G],CNF):-
    unCert(N,Resultat),
    restriccioColorPerNode(G,NovaCNF),
@@ -132,7 +132,7 @@ nth(K, [_|L],X) :- nth(K1, L, X), K is K1 + 1.
 %nth(K, [_|L],X) :- nth(K1, L, X), K is K1 + 1.
 
 %restriccioColorsFixes(Graf,[R|Inici],[]).%WIP
-restriccioColorsFixes(_,[],[]).
+restriccioColorsFixes(_,[],[]):-!.
 restriccioColorsFixes(_,[(N,C)|Inici],CNF):-
    R is N * C,
    restriccioColorsFixes([],Inici,NovaCNF),
@@ -227,7 +227,6 @@ resol(N,K,A, I):-
    sat(CNF,[],RESULTAT),
    exclude(negative,RESULTAT,ResultatMostrar),
    sort(ResultatMostrar,ResultatMostrarOrdenat),
-   %caguendiooooos jo estic mirant pero hi ha codi que no entenc que fa, el unCert?codifica una cnf per tal k una i nomes una d les variables sigui certa
    mostrarSolucio(ResultatMostrarOrdenat,1,K).
 
 %%%%%%%%%%%%%%%%%%%%
@@ -235,12 +234,10 @@ resol(N,K,A, I):-
 % Donat el nombre de nodes,  les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
 % Pista, us pot ser util fer una immersio amb el nombre de colors permesos.
-chromatic(N,A,Inputs):- \+ chromaticAux(N,A,Inputs,1).
+chromatic(N,A,Inputs):- chromaticAux(N,A,Inputs,1).
 
-chromaticAux(N,A,Inputs,K):-
-   \+ resol(N,K,A,Inputs),
-   NK is K + 1,
-   chromaticAux(N,A,Inputs,NK).
+chromaticAux(N,A,Inputs,K):- resol(N,K,A,Inputs).
+chromaticAux(N,A,Inputs,K):- NK is K + 1, chromaticAux(N,A,Inputs,NK).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % com a query podeu cridar:
