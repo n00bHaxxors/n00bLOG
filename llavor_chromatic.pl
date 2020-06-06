@@ -4,14 +4,14 @@
 % si F es satisfactible, M sera el model de F afegit a la interpretacio I (a la primera crida I sera buida).
 % Assumim invariant que no hi ha literals repetits a les clausules ni la clausula buida inicialment.
 
-sat([],I,I):-     write('SAT!!'),nl,!.
+sat([],I,I):-     write('SAT!!'),write(I),nl,!.
 sat(CNF,I,M):-
    % Ha de triar un literal d’una clausula unitaria, si no n’hi ha cap, llavors un literal pendent qualsevol.
    tria(CNF,Lit),
 
    % Simplifica la CNF amb el Lit triat (compte pq pot fallar, es a dir si troba la clausula buida fallara i fara backtraking).
    simplif(Lit,CNF,CNFS),
-
+   write(CNFS),nl,
    % crida recursiva amb la CNF i la interpretacio actualitzada
 
    append(I, [Lit], J),
@@ -29,7 +29,7 @@ sat(CNF,I,M):-
 % Ha de triar un literal d’una clausula unitaria, si no n’hi ha cap, llavors un literal pendent qualsevol.
 tria(CNF, Lit):- member([Lit], CNF),!.
 tria([[Lit|_]|_],Lit).
-tria([[Lit|_]|_],-Lit).
+tria([[Lit|_]|_],L):- L is -Lit.
 
 %%%%%%%%%%%%%%%%%%%%%
 % simlipf(Lit, F, FS)
@@ -124,8 +124,8 @@ restriccioColorPerNode([N|G],CNF):-
    restriccioColorPerNode(G,NovaCNF),
    append(NovaCNF,Resultat,CNF).
 
-nth(1,[X|_],X).
-nth(K, [_|L],X) :- nth(K1, L, X), K is K1 + 1.
+buscarPos(1,[X|_],X).
+buscarPos(K, [_|L],X) :- buscarPos(K1, L, X), K is K1 + 1.
 
 %restriccioColorsFixes(Graf,[R|Inici],[]).%WIP
 restriccioColorsFixes(_,[],[]):-!.
@@ -152,8 +152,8 @@ restriccioColorsAdjacentsAux([E|Ex],[D|Dx],CNF):-
 
 restriccioColorsAdjacents(_,[],[]):-!.
 restriccioColorsAdjacents(Graf,[(E,D)|Arestes],CNF):-
-   nth(E,Graf,NodeE),
-   nth(D,Graf,NodeD),
+   buscarPos(E,Graf,NodeE),
+   buscarPos(D,Graf,NodeD),
    restriccioColorsAdjacentsAux(NodeE,NodeD,C),
    restriccioColorsAdjacents(Graf,Arestes,NovaCNF),
    append(C,NovaCNF,CNF).
@@ -190,38 +190,41 @@ codifica(N,K,Arestes,Inici,C):-
 % resolGraf(N,A,K,Inputs)
 % Donat el nombre de nodes, el nombre de colors, les Arestes A, i les inicialitzacions,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
+mostrarSolucio(_,Color,CMAX):-
+   Color is CMAX + 1,!.
+mostrarSolucio(Sol,Color,CMAX):-
+   NextColor is Color + 1,
+   write('color '),write(Color),write(': '),
+   mostrarNodesColor(Sol,Color,CMAX),nl,
+   mostrarSolucio(Sol,NextColor,CMAX),!.
 
-mostrarSolucio([],_,_).
-mostrarSolucio([V|Model],Nactual,CMAX):-
+mostrarNodesColor([],_,_):-!.
+mostrarNodesColor([V|Vl],Color,CMAX):-
    T1 is V - 1,
-   T2 is T1 mod CMAX,
-   Resultat is T2 + 1,
-   write('El node '),write(Nactual),write(' sera del color nº'),write(Resultat),nl,
-   Seguent is Nactual + 1,
-   mostrarSolucio(Model,Seguent,CMAX).
-
-mostrarSolucio2([],_,_).
-mostrarSolucio2([V|Model],Nactual,CMAX):-
-   T1 is V - 1,
-   T2 is T1 mod CMAX,
-   Resultat is T2 + 1,
-   write('El node '),write(Nactual),write(' sera del color nº'),write(Resultat),nl,
-   Seguent is Nactual + 1,
-   mostrarSolucio(Model,Seguent,CMAX).
+   T2 is T1 mod CMAX, % per obtenir el color
+   Color is T2 + 1,
+   Node is truncate((T1 / CMAX) + 1),
+   write(Node), write(','),
+   mostrarNodesColor(Vl,Color,CMAX),!.
+mostrarNodesColor([_|Vl],Color,CMAX):-
+   mostrarNodesColor(Vl,Color,CMAX),!.
 
 
-verificarResultat(RESULTAT):- RESULTAT = [],!,
-                              write('No hi ha solucio').
+%color 1: 1, 4, 7, 8
+%color 2: 2, 5, 6
+%color 3: 3, 9, 10
 
-resol(N,K,A, I):-
+resol(N,K,A,I):-
    codifica(N,K,A,I,CNF),
-   write(CNF),
-   write('SAT Solving at k = '),write(K), nl,
    sat(CNF,[],RESULTAT),
-   verificarResultat(RESULTAT),
+   write(CNF),nl,
+   write('El nombre cromàtic és: '), write(K),nl,
    exclude(negative,RESULTAT,ResultatMostrar),
    sort(ResultatMostrar,ResultatMostrarOrdenat),
+   write(ResultatMostrarOrdenat),nl,
    mostrarSolucio(ResultatMostrarOrdenat,1,K).
+resol(_,K,_,_):-
+   write('No hi ha solucio amb '), write(K), write(' colors'), nl, false.
 
 %%%%%%%%%%%%%%%%%%%%
 % chromatic(N,A,Inputs)
