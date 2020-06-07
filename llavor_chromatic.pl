@@ -127,10 +127,10 @@ buscarPos(K, [_|L],X) :- buscarPos(K1, L, X), K is K1 + 1.
 %%%%%%%%%%%%%%%%%%%
 % restriccioColorsFixes(Graf,[R|Inici],[])
 % Donat el graf (llista de llistes de vars) i una llista de colors fixes, retorna una CNF la qual codifica que cada node del graf especificat tingui el color fixe indicat.
-restriccioColorsFixes(_,[],[]):-!.
-restriccioColorsFixes(_,[(N,C)|Inici],CNF):-
-   R is N * C,
-   restriccioColorsFixes([],Inici,NovaCNF),
+restriccioColorsFixes(_,[],_,[]):-!.
+restriccioColorsFixes(_,[(N,C)|Inici],CMAX,CNF):-
+   R is (N-1) * CMAX + C,
+   restriccioColorsFixes([],Inici,CMAX,NovaCNF),
    append(NovaCNF,[[R]],CNF).
 
 %%%%%%%%%%%%%%%%%%%
@@ -164,7 +164,7 @@ restriccioColorsAdjacents(Graf,[(E,D)|Arestes],CNF):-
 codifica(N,K,Arestes,Inici,C):-
    llistaDeLlistes(N,K,Graf),
    restriccioColorPerNode(Graf,CNF1),
-   restriccioColorsFixes(Graf,Inici,CNF2),
+   restriccioColorsFixes(Graf,Inici,K,CNF2),
    restriccioColorsAdjacents(Graf,Arestes,CNF3),
    append(CNF1,CNF2,CNF4),
    append(CNF3,CNF4,C).
@@ -208,8 +208,8 @@ trobarCromatics(N,K,A,I):-
 %%%%%%%%%%%%%%%%%%%%
 % trobarNombreCromatic(N,K,A,I)
 % Retorna el nombre mínim de colors per pintar el graf.
-trobarNombreCromatic(N,A,I,K,K):- codifica(N,K,A,I,CNF),sat(CNF,[],_),!.
-trobarNombreCromatic(N,A,Inputs,K,S):- NextK is K + 1, trobarNombreCromatic(N,A,Inputs,NextK,S).
+trobarNombreCromatic(N,A,I,K,K):- N >= K, codifica(N,K,A,I,CNF),sat(CNF,[],_),!.
+trobarNombreCromatic(N,A,Inputs,K,S):- N >= K, NextK is K + 1, trobarNombreCromatic(N,A,Inputs,NextK,S).
 
 
 %%%%%%%%%%%%%%%%%%%%
@@ -218,6 +218,7 @@ trobarNombreCromatic(N,A,Inputs,K,S):- NextK is K + 1, trobarNombreCromatic(N,A,
 % -> es mostra la solucio per pantalla si en te o es diu que no en te.
 % Pista, us pot ser util fer una immersio amb el nombre de colors permesos.
 resol(N,A,Inputs):- trobarNombreCromatic(N,A,Inputs,1,K),write('El nombre cromàtic és '), write(K),nl,trobarCromatics(N,K,A,Inputs), true.
+resol(_,_,_):- write("No s'ha trobat solució cap altre solució, o bé les inicialitzacions contenen dos nodes del mateix color"),nl.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    
